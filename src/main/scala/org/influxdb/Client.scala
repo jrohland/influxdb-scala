@@ -1,14 +1,11 @@
 package org.influxdb
 
-import org.influxdb.response.NewResponse
 import org.json4s.jackson.Serialization
 import org.json4s.NoTypeHints
 import com.ning.http.client.{Response, AsyncHttpClient}
 import java.util.concurrent.{Future, TimeUnit}
 import org.json4s.jackson.Serialization._
 import java.net.URLEncoder
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
 
 
 class Client(host: String = "localhost:8086",
@@ -47,12 +44,10 @@ class Client(host: String = "localhost:8086",
     val r = query("SHOW DATABASES")
     r._2 match {
       case None =>
-        val databases = read[NewResponse](r._1).results.flatMap(result => {
-          result.series.flatMap(series => {
-            series.values.flatMap(value => {
-              value.map(v => {
-                new response.Database(v)
-              })
+        val databases = r._1.flatMap(series => {
+          series.values.flatMap(value => {
+            value.map(v => {
+              new response.Database(v)
             })
           })
         })
@@ -98,41 +93,16 @@ class Client(host: String = "localhost:8086",
     r._2
   }
 
-  def query(query: String, timePrecision: Option[String] = None, chunked: Boolean = false): (response.Response, error.Error) = {
+  def query(query: String, epoch: Option[TimePrecision] = None): (List[response.Series], error.Error) = {
     try {
-      val q = URLEncoder.encode(query, "UTF-8")
-      val url = getUrl(s"/db/$database/series") + s"&q=$q&chunked=$chunked" +
-        (if (timePrecision.isDefined) s"&time_precision=${timePrecision.get}" else "")
-
+      val params: Map[String, String] = Map("db" -> database, "q" -> query) ++
+        (if (epoch.isDefined) Map("epoch" -> epoch.get.toString()) else Map())
+      val url = getUrl(s"/query") + "&" + createQueryString(params)
       val r = getResponse(httpClient.prepareGet(url).execute())
-      responseToError(r) match {
-        case None => (response.Response(r.getResponseBody), None)
-        case Some(err) => (null, Some(err))
-      }
+      val series = read[response.Response](r.getResponseBody).results.head.series
+      (series, responseToError(r))
     } catch {
       case ex: Exception => (null, Some(ex.getMessage))
-    }
-  }
-
-  def getContinuousQueries: (List[response.ContinuousQuery], error.Error) = {
-    try {
-      val url = getUrl(s"/db/$database/continuous_queries")
-      val r = getResponse(httpClient.prepareGet(url).execute())
-      responseToError(r) match {
-        case None => (read[List[response.ContinuousQuery]](r.getResponseBody), None)
-        case Some(err) => (Nil, Some(err))
-      }
-    } catch {
-      case ex: Exception => (Nil, Some(ex.getMessage))
-    }
-  }
-
-  def deleteContinuousQueries(id: Int): error.Error = {
-    try {
-      val url = getUrl(s"/db/$database/continuous_queries/$id")
-      responseToError(getResponse(httpClient.prepareDelete(url).execute()))
-    } catch {
-      case ex: Exception => Some(ex.getMessage)
     }
   }
 
@@ -158,26 +128,6 @@ class Client(host: String = "localhost:8086",
       return None
     }
     Some(s"Server returned (${r.getStatusText}): ${r.getResponseBody}")
-  }
-
-  private def query(query: String): (String, error.Error) = {
-    try {
-      val url = getUrl(s"/query") + "&" + createQueryString(Map("q" -> query))
-      val r = getResponse(httpClient.prepareGet(url).execute())
-      (r.getResponseBody, responseToError(r))
-    } catch {
-      case ex: Exception => (null, Some(ex.getMessage))
-    }
-  }
-
-  private def queryDatabase(query: String): (String, error.Error) = {
-    try {
-      val url = getUrl(s"/query") + "&" + createQueryString(Map("db" -> database, "q" -> query))
-      val r = getResponse(httpClient.prepareGet(url).execute())
-      (r.getResponseBody, responseToError(r))
-    } catch {
-      case ex: Exception => (null, Some(ex.getMessage))
-    }
   }
 
   private def createQueryString(params: Map[String, String]): String = {
