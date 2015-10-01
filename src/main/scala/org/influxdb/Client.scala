@@ -12,7 +12,7 @@ class Client(host: String = "localhost:8086", var username: String = "root", var
   implicit val formats = Serialization.formats(NoTypeHints)
   private val httpClient = new AsyncHttpClient()
 
-  var (timeout, unit) = (3, TimeUnit.SECONDS)
+  var (timeout, unit) = (60, TimeUnit.SECONDS)
 
   def close() {
     httpClient.close()
