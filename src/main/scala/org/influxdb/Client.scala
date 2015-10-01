@@ -1,5 +1,6 @@
 package org.influxdb
 
+import org.influxdb.enums.{TimePrecision, Privilege}
 import org.json4s.jackson.Serialization
 import org.json4s.NoTypeHints
 import com.ning.http.client.{Response, AsyncHttpClient}
