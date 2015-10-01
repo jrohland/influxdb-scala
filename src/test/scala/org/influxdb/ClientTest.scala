@@ -27,16 +27,16 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 	}
 
 	test("create|get|delete database") {
-		assert(None == client.createDatabase(DB_NAME, DB_REPLICATION_FACTOR))
+		assert(None == client.createDatabase(DB_NAME))
 
 		val (dbs, err) = client.getDatabaseList
 		assert(None == err)
-		assert(Nil != dbs.filter { db => (db.name == DB_NAME) && (db.replicationFactor == DB_REPLICATION_FACTOR) })
+		assert(Nil != dbs.filter { db => (db.name == DB_NAME) })
 		assert(None == client.deleteDatabase(DB_NAME))
 	}
 
 	test("create|authenticate database user") {
-		assert(None == client.createDatabase(DB_NAME, DB_REPLICATION_FACTOR))
+		assert(None == client.createDatabase(DB_NAME))
 		assert(None == client.createDatabaseUser(DB_NAME, DB_USER, DB_PASSWORD))
 		assert(None == client.authenticateDatabaseUser(DB_NAME, DB_USER, DB_PASSWORD))
 		assert(None == client.deleteDatabase(DB_NAME))

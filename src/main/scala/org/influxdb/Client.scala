@@ -1,14 +1,22 @@
 package org.influxdb
 
+import org.influxdb.response.NewResponse
 import org.json4s.jackson.Serialization
 import org.json4s.NoTypeHints
 import com.ning.http.client.{Response, AsyncHttpClient}
 import java.util.concurrent.{Future, TimeUnit}
 import org.json4s.jackson.Serialization._
 import java.net.URLEncoder
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
 
 
-class Client(host: String = "localhost:8086", var username: String = "root", var password: String = "root", var database: String = "", schema: String = "http") {
+class Client(host: String = "localhost:8086",
+             var username: String = "root",
+             var password: String = "root",
+             var database: String = "",
+             schema: String = "http") {
+
   implicit val formats = Serialization.formats(NoTypeHints)
   private val httpClient = new AsyncHttpClient()
 
@@ -27,39 +35,29 @@ class Client(host: String = "localhost:8086", var username: String = "root", var
     }
   }
 
-  def createDatabase(name: String, replicationFactor: Int = 1): error.Error = {
-    try {
-      val url = getUrl("/db")
-      val payload = write(Map("name" -> name, "replicationFactor" -> replicationFactor))
-
-      val fr = httpClient.preparePost(url).addHeader("Content-Type", "application/json").setBody(payload).execute()
-      responseToError(getResponse(fr))
-    } catch {
-      case ex: Exception => Some(ex.getMessage)
-    }
+  def createDatabase(name: String): error.Error = {
+    query(s"CREATE DATABASE $name")._2
   }
 
   def deleteDatabase(name: String): error.Error = {
-    try {
-      val url = getUrl(s"/db/$name")
-      val fr = httpClient.prepareDelete(url).execute()
-      responseToError(getResponse(fr))
-    } catch {
-      case ex: Exception => Some(ex.getMessage)
-    }
+    query(s"DROP DATABASE $name")._2
   }
 
   def getDatabaseList: (List[response.Database], error.Error) = {
-    try {
-      val url = getUrl("/db")
-
-      val r = getResponse(httpClient.prepareGet(url).execute())
-      responseToError(r) match {
-        case None => (read[List[response.Database]](r.getResponseBody), None)
-        case Some(err) => (Nil, Some(err))
-      }
-    } catch {
-      case ex: Exception => (Nil, Some(ex.getMessage))
+    val r = query("SHOW DATABASES")
+    r._2 match {
+      case None =>
+        val databases = read[NewResponse](r._1).results.flatMap(result => {
+          result.series.flatMap(series => {
+            series.values.flatMap(value => {
+              value.map(v => {
+                new response.Database(v)
+              })
+            })
+          })
+        })
+        (databases, None)
+      case Some(err) => (Nil, Some(err))
     }
   }
 
@@ -214,6 +212,33 @@ class Client(host: String = "localhost:8086", var username: String = "root", var
     }
     return Some(s"Server returned (${r.getStatusText}): ${r.getResponseBody}")
   }
+
+  private def query(query: String): (String, error.Error) = {
+    try {
+      val url = getUrl(s"/query") + "&" + createQueryString(Map("q" -> query))
+      val r = getResponse(httpClient.prepareGet(url).execute())
+      (r.getResponseBody, responseToError(r))
+    } catch {
+      case ex: Exception => (null, Some(ex.getMessage))
+    }
+  }
+
+  private def queryDatabase(query: String): (String, error.Error) = {
+    try {
+      val url = getUrl(s"/query") + "&" + createQueryString(Map("db" -> database, "q" -> query))
+      val r = getResponse(httpClient.prepareGet(url).execute())
+      (r.getResponseBody, responseToError(r))
+    } catch {
+      case ex: Exception => (null, Some(ex.getMessage))
+    }
+  }
+
+  private def createQueryString(params: Map[String, String]): String = {
+    params.map(v => {
+      URLEncoder.encode(v._1, "UTF8") + "=" + URLEncoder.encode(v._2, "UTF8")
+    }).mkString("&")
+  }
+
   private def getResponse(fr: Future[Response]): Response = fr.get(timeout, unit)
   private def getUrlWithUserAndPass(path: String, username: String, password: String): String = s"$schema://$host$path?u=$username&p=$password"
   private def getUrl(path: String) = getUrlWithUserAndPass(path, username, password)
