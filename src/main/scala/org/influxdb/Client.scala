@@ -5,7 +5,6 @@ import org.json4s.NoTypeHints
 import com.ning.http.client.{Response, AsyncHttpClient}
 import java.util.concurrent.{Future, TimeUnit}
 import org.json4s.jackson.Serialization._
-import scala.Some
 import java.net.URLEncoder
 
 
@@ -13,7 +12,7 @@ class Client(host: String = "localhost:8086", var username: String = "root", var
   implicit val formats = Serialization.formats(NoTypeHints)
   private val httpClient = new AsyncHttpClient()
 
-  var (timeout, unit) = (3, TimeUnit.SECONDS)
+  var (timeout, unit) = (60, TimeUnit.SECONDS)
 
   def close() {
     httpClient.close()
@@ -219,62 +218,3 @@ class Client(host: String = "localhost:8086", var username: String = "root", var
   private def getUrlWithUserAndPass(path: String, username: String, password: String): String = s"$schema://$host$path?u=$username&p=$password"
   private def getUrl(path: String) = getUrlWithUserAndPass(path, username, password)
 }
-
-import scala.util.parsing.json.JSON
-
-package object response {
-  case class Database(name: String, replicationFactor: Int)
-  case class ClusterAdmin(username: String)
-  case class ContinuousQuery(id: Int, query: String)
-  case class Response(json: String) {
-    
-    def toSeries: Array[Series] = {
-      val all = JSON.parseFull(json).get.asInstanceOf[List[Any]]
-      val series = new Array[Series](all.length)
-
-      var i = 0
-      all.foreach { ai =>
-        val m = ai.asInstanceOf[Map[String, Any]]
-        val name = m.get("name").get.asInstanceOf[String]
-        val columns = m.get("columns").get.asInstanceOf[List[String]].toArray
-        val points = m.get("points").get.asInstanceOf[List[List[Any]]].map(li => li.toArray).toArray
-
-        series(i) = Series(name, columns, points)
-        i += 1
-      }
-      series
-    }
-
-    def toSeriesMap: Array[SeriesMap] = {
-      val all = JSON.parseFull(json).get.asInstanceOf[List[Any]]
-      val series = new Array[SeriesMap](all.length)
-
-      var i = 0
-      all.foreach { ai =>
-        val m = ai.asInstanceOf[Map[String, Any]]
-        val name = m.get("name").get.asInstanceOf[String]
-        val columns = m.get("columns").get.asInstanceOf[List[String]]
-
-        var ii = 0
-        val mm = scala.collection.mutable.Map[String, Array[Any]]()
-        val cc = new Array[String](columns.size)      
-        columns.foreach { cl => cc(ii) = cl; mm(cl) = Array[Any](); ii += 1 }
-
-        m.get("points").get.asInstanceOf[List[List[Any]]].foreach { pt => 
-          ii = 0        
-          pt.foreach { v => mm += cc(ii) -> (mm(cc(ii)) :+ v); ii += 1; }
-        }
-        series(i) = SeriesMap(name, mm.toMap)
-        i += 1
-      }
-      series    
-    }
-  }  
-}
-
-package object error {
-  type Error = Option[String]
-}
-
-case class Series(name: String, columns: Array[String], points: Array[Array[Any]])
-case class SeriesMap(name: String, objects: Map[String, Array[Any]])
