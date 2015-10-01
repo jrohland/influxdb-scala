@@ -62,8 +62,8 @@ class Client(host: String = "localhost:8086",
   }
 
   def createUser(username: String, password: String, isAdmin: Boolean): error.Error = {
-    val privs = if (isAdmin) " WITH ALL PRIVILEGES" else ""
-    val q = s"CREATE USER $username WITH PASSWORD '$password'$privs"
+    val q = s"CREATE USER $username WITH PASSWORD '$password'" +
+      (if (isAdmin) " WITH ALL PRIVILEGES" else "")
     val r = query(q)
     r._2
   }
