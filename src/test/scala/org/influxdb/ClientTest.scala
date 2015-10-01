@@ -35,7 +35,7 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 		assert(None == client.deleteDatabase(DB_NAME))
 	}
 
-	test("create|authenticate database user") {
+	/*test("create|authenticate database user") {
 		assert(None == client.createDatabase(DB_NAME))
 		assert(None == client.createDatabaseUser(DB_NAME, DB_USER, DB_PASSWORD))
 		assert(None == client.authenticateDatabaseUser(DB_NAME, DB_USER, DB_PASSWORD))
@@ -53,7 +53,7 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 		assert(None != client.authenticateClusterAdmin(CLUSTER_ADMIN_USER, CLUSTER_ADMIN_PASS))
 		assert(None == client.authenticateClusterAdmin(CLUSTER_ADMIN_USER, CLUSTER_ADMIN_NEWPASS))
 		assert(None == client.deleteClusterAdmin(CLUSTER_ADMIN_USER))
-	}
+	}*/
 
 	test("write|query series") {
 		assert(None == client.createDatabase(DB_NAME))

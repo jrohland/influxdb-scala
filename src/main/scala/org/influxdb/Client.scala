@@ -61,94 +61,41 @@ class Client(host: String = "localhost:8086",
     }
   }
 
-  def createDatabaseUser(database: String, username: String, password: String, readFrom: Option[String] = None, writeTo: Option[String] = None): error.Error = {
-    try {
-      val url = getUrl(s"/db/$database/users")
-      val payload = write(Map("name" -> username, "password" -> password, "readFrom" -> readFrom, "writeTo" -> writeTo))
-
-      val fr = httpClient.preparePost(url).addHeader("Content-Type", "application/json").setBody(payload).execute()
-      responseToError(getResponse(fr))
-    } catch {
-      case ex: Exception => Some(ex.getMessage)
-    }
+  def createUser(username: String, password: String, isAdmin: Boolean): error.Error = {
+    val privs = if (isAdmin) " WITH ALL PRIVILEGES" else ""
+    val q = s"CREATE USER $username WITH PASSWORD '$password'$privs"
+    val r = query(q)
+    r._2
   }
 
-  def updateDatabaseUser(database: String, username: String, password: Option[String] = None, isAdmin: Boolean = false, readFrom: Option[String] = None, writeTo: Option[String] = None): error.Error = {
-    try {
-      val url = getUrl(s"/db/$database/users/$username")
-      val payload = write(Map("password" -> password, "admin" -> isAdmin, "readFrom" -> readFrom, "writeTo" -> writeTo))
-
-      val fr = httpClient.preparePost(url).addHeader("Content-Type", "application/json").setBody(payload).execute()
-      responseToError(getResponse(fr))
-    } catch {
-      case ex: Exception => Some(ex.getMessage)
-    }
+  def updateUserPassword(username: String, password: String): error.Error = {
+    val q = s"SET PASSWORD FOR $username = '$password'"
+    val r = query(q)
+    r._2
   }
 
-  def authenticateDatabaseUser(database: String, username: String, password: String): error.Error = {
-    try {
-      val url = getUrlWithUserAndPass(s"/db/$database/authenticate", username, password)
-      responseToError(getResponse(httpClient.prepareGet(url).execute()))
-    } catch {
-      case ex: Exception => Some(ex.getMessage)
-    }
+  def grantUserPrivilege(username: String, database: String, privilege: Privilege): error.Error = {
+    val q = s"GRANT $privilege ON $database TO $username"
+    val r = query(q)
+    r._2
   }
 
-  def createClusterAdmin(username: String, password: String): error.Error = {
-    try {
-      val url = getUrl("/cluster_admins")
-      val payload = write(Map("name" -> username, "password" -> password))
-      val fr = httpClient.preparePost(url).addHeader("Content-Type", "application/json").setBody(payload).execute()
-      responseToError(getResponse(fr))
-    } catch {
-      case ex: Exception => Some(ex.getMessage)
-    }
+  def grantUserAllPrivilege(username: String): error.Error = {
+    val q = s"GRANT ALL PRIVILEGES TO $username"
+    val r = query(q)
+    r._2
   }
 
-  def updateClusterAdmin(username: String, password: String): error.Error = {
-    try {
-      val url = getUrl(s"/cluster_admins/$username")
-      val payload = write(Map("password" -> password))
-
-      val fr = httpClient.preparePost(url).addHeader("Content-Type", "application/json").setBody(payload).execute()
-      responseToError(getResponse(fr))
-    } catch {
-      case ex: Exception => Some(ex.getMessage)
-    }
+  def revokeUserPrivilege(username: String, database: String, privilege: Privilege): error.Error = {
+    val q = s"REVOKE $privilege ON $database TO $username"
+    val r = query(q)
+    r._2
   }
 
-  def deleteClusterAdmin(username: String): error.Error = {
-    try {
-      val url = getUrl(s"/cluster_admins/$username")
-
-      val fr = httpClient.prepareDelete(url).execute()
-      responseToError(getResponse(fr))
-    } catch {
-      case ex: Exception => Some(ex.getMessage)
-    }
-  }
-
-  def getClusterAdminList: (List[response.ClusterAdmin], error.Error) = {
-    try {
-      val url = getUrl(s"/cluster_admins")
-
-      val r = getResponse(httpClient.prepareGet(url).execute())
-      responseToError(r) match {
-        case None => (read[List[response.ClusterAdmin]](r.getResponseBody), None)
-        case Some(err) => (Nil, Some(err))
-      }
-    } catch {
-      case ex: Exception => (Nil, Some(ex.getMessage))
-    }
-  }
-
-  def authenticateClusterAdmin(username: String, password: String): error.Error = {
-    try {
-      val url = getUrlWithUserAndPass("/cluster_admins/authenticate", username, password)
-      responseToError(getResponse(httpClient.prepareGet(url).execute()))
-    } catch {
-      case ex: Exception => Some(ex.getMessage)
-    }
+  def revokeUserAllPrivilege(username: String): error.Error = {
+    val q = s"REVOKE ALL PRIVILEGES TO $username"
+    val r = query(q)
+    r._2
   }
 
   def query(query: String, timePrecision: Option[String] = None, chunked: Boolean = false): (response.Response, error.Error) = {
@@ -210,7 +157,7 @@ class Client(host: String = "localhost:8086",
     if (r.getStatusCode >= 200 && r.getStatusCode < 300) {
       return None
     }
-    return Some(s"Server returned (${r.getStatusText}): ${r.getResponseBody}")
+    Some(s"Server returned (${r.getStatusText}): ${r.getResponseBody}")
   }
 
   private def query(query: String): (String, error.Error) = {
