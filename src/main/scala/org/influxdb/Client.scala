@@ -1,7 +1,13 @@
 package org.influxdb
 
+import java.text.NumberFormat
+import java.util.Locale
+
+import com.google.common.escape.Escapers
 import org.influxdb.enums.Privilege._
 import org.influxdb.enums.TimePrecision._
+import org.influxdb.enums.WriteConsistency
+import org.influxdb.enums.WriteConsistency._
 import org.json4s.jackson.Serialization
 import org.json4s.NoTypeHints
 import com.ning.http.client.{Response, AsyncHttpClient}
@@ -20,6 +26,13 @@ class Client(host: String = "localhost:8086",
 
   implicit val formats = Serialization.formats(NoTypeHints)
   private val httpClient = new AsyncHttpClient()
+
+  private val keyEscaper = Escapers.builder().addEscape(' ', "\\ ").addEscape(',', "\\,").build()
+  private val fieldEscaper = Escapers.builder().addEscape('"', "\\\"").build()
+  private val numberFormat = NumberFormat.getInstance(Locale.ENGLISH)
+  numberFormat.setMaximumFractionDigits(340)
+  numberFormat.setGroupingUsed(false)
+  numberFormat.setMinimumFractionDigits(1)
 
   def close() {
     httpClient.close()
@@ -108,23 +121,54 @@ class Client(host: String = "localhost:8086",
     }
   }
 
-  def writeSeries(series: Array[Series]): error.Error = writeSeriesCommon(series, None)
+  /*def writeSeries(series: Array[Series]): error.Error = writeSeriesCommon(series, None)
 
   def writeSeriesWithTimePrecision(series: Array[Series], timePrecision: String): error.Error = {
     writeSeriesCommon(series, Some(Map[String, String]("time_precision" -> timePrecision)))
-  }
+  }*/
 
-  private def writeSeriesCommon(series: Array[Series], options: Option[Map[String, String]]): error.Error = {
+  private def writeSeriesCommon(series: Array[Series],
+                                timePrecision: TimePrecision = NANOSECONDS,
+                                writeConsistency: WriteConsistency = WriteConsistency.ALL,
+                                retentionPolicy: Option[String] = None): error.Error = {
     try {
-      val url = getUrl(s"/db/$database/series") + (if (options.isDefined) options.get.map { o => val (k, v) = o; s"$k=$v" }.mkString("&", "&", "") else "")
-      val data = write(series)
+      val params: Map[String, String] = Map(
+        "db" -> database,
+        "precision" -> timePrecision.toString,
+        "consistency" -> writeConsistency.toString
+      ) ++ (if (retentionPolicy.isDefined) Map("rp" -> retentionPolicy.get) else Map())
 
-      val fr = httpClient.preparePost(url).addHeader("Content-Type", "application/json").setBody(data).execute()
-      responseToError(getResponse(fr))
+      val url = getUrl(s"/write") + "&" + createQueryString(params)
+      val data = series.map(series => {
+        val seriesName = s"${keyEscaper.escape(series.name)}"
+        val keys = series.keys.map(key => {
+          s"${keyEscaper.escape(key._1)}=${keyEscaper.escape(key._2)}"
+        }).mkString(",")
+
+        val fields = series.fields.map(field => {
+          s"${fieldEscaper.escape(field._1)}=" + (
+              field._2 match {
+                case s: String =>
+                  "\"" + fieldEscaper.escape(s) + "\""
+                case n: java.lang.Number =>
+                  s"${numberFormat.format(n)}"
+                case default =>
+                  s"$default"
+              }
+            )
+        }).mkString(",")
+
+        s"$seriesName,$keys $fields"
+      }).mkString("\n")
+
+      //val fr = httpClient.preparePost(url).setBody(data).execute()
+      //responseToError(getResponse(fr))
+      Some(data)
     } catch {
       case ex: Exception => Some(ex.getMessage)
     }
   }
+
   private def responseToError(r: Response): error.Error = {
     if (r.getStatusCode >= 200 && r.getStatusCode < 300) {
       return None

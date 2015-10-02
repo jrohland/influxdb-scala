@@ -1,3 +1,3 @@
 package org.influxdb
 
-case class Series(name: String, columns: Array[String], points: Array[Array[Any]])
+case class Series(name: String, keys: Map[String, String], fields: Map[String, Any])

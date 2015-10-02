@@ -55,7 +55,7 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 		assert(None == client.deleteClusterAdmin(CLUSTER_ADMIN_USER))
 	}*/
 
-	test("write|query series") {
+	/*test("write|query series") {
 		assert(None == client.createDatabase(DB_NAME))
 		client.database = DB_NAME
 		val events = Series("events", 
@@ -74,14 +74,14 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 
 		assert(None == client.writeSeries(Array(events, errors)))
 		
-		/*val (response, err) = client.query("SELECT email FROM events WHERE type = 'follow'")
+		val (response, err) = client.query("SELECT email FROM events WHERE type = 'follow'")
 		assert(None == err)
 
 		val series = response.toSeries		
 		assert(series(0).points(0)(2) == "paul@influxdb.org")
 		
 		val seriesMap = response.toSeriesMap
-		assert(seriesMap(0).objects("email")(0) == "paul@influxdb.org")*/
+		assert(seriesMap(0).objects("email")(0) == "paul@influxdb.org")
 
 		assert(None == client.deleteDatabase(DB_NAME))
 	}
@@ -107,5 +107,5 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 
 
 		assert(None == client.deleteDatabase(DB_NAME))
-	}
+	}*/
 }
