@@ -5,8 +5,8 @@ import org.scalatest.{ BeforeAndAfter, FunSuite }
 class ClientTest  extends FunSuite with BeforeAndAfter {
 	private var client: Client = null
 
-	final val DB_NAME               = "local-test"
-	final val DB_USER               = "user"
+	final val DB_NAME               = "localtest"
+	final val DB_USER               = "dbuser"
 	final val DB_PASSWORD           = "password"
 	final val CLUSTER_ADMIN_USER    = "admin"
 	final val CLUSTER_ADMIN_PASS    = "pass"
@@ -34,7 +34,7 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 		assert(client.deleteDatabase(DB_NAME).isEmpty)
 	}
 
-	test("create|get|delete database user") {
+	test("create|get|delete user") {
     assert(client.createUser(DB_USER, DB_PASSWORD, isAdmin = false).isEmpty)
 
     val (users, err) = client.getUserList
