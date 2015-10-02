@@ -124,10 +124,10 @@ class Client(host: String = "localhost:8086",
     }
   }
 
-  def query(query: String, database: Option[String] = None, timePrecision: Option[TimeUnit] = None):
+  def query(queryStr: String, database: Option[String] = None, timePrecision: Option[TimeUnit] = None):
   (List[response.Series], error.Error) = {
     try {
-      val params: Map[String, String] = Map("q" -> query) ++
+      val params: Map[String, String] = Map("q" -> queryStr) ++
         (if (database.isDefined) {
           Map("db" -> database.get)
         } else {
@@ -154,6 +154,9 @@ class Client(host: String = "localhost:8086",
       case ex: Exception => (null, Some(ex.getMessage))
     }
   }
+
+  def queryDatabase(queryStr: String, database: String, timePrecision: Option[TimeUnit] = None):
+  (List[response.Series], error.Error) = query(queryStr, Option(database), timePrecision)
 
   def writeSeries(series: Array[Series], database: String,
                                 writeConsistency: WriteConsistency = WriteConsistency.ALL,
