@@ -6,7 +6,6 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 	private var client: Client = null
 
 	final val DB_NAME               = "local-test"
-	final val DB_REPLICATION_FACTOR = 1
 	final val DB_USER               = "user"
 	final val DB_PASSWORD           = "password"
 	final val CLUSTER_ADMIN_USER    = "admin"
@@ -23,89 +22,44 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 	}
 
 	test("ping") {  
-		assert(None == client.ping)
+		assert(client.ping.isEmpty)
 	}
 
 	test("create|get|delete database") {
-		assert(None == client.createDatabase(DB_NAME))
+		assert(client.createDatabase(DB_NAME).isEmpty)
 
 		val (dbs, err) = client.getDatabaseList
-		assert(None == err)
-		assert(Nil != dbs.filter { db => (db.name == DB_NAME) })
-		assert(None == client.deleteDatabase(DB_NAME))
+		assert(err.isEmpty)
+		assert(Nil != dbs.filter { db => db.name == DB_NAME })
+		assert(client.deleteDatabase(DB_NAME).isEmpty)
 	}
 
-	/*test("create|authenticate database user") {
-		assert(None == client.createDatabase(DB_NAME))
-		assert(None == client.createDatabaseUser(DB_NAME, DB_USER, DB_PASSWORD))
-		assert(None == client.authenticateDatabaseUser(DB_NAME, DB_USER, DB_PASSWORD))
-		assert(None == client.deleteDatabase(DB_NAME))
+	test("create|get|delete database user") {
+    assert(client.createUser(DB_USER, DB_PASSWORD, isAdmin = false).isEmpty)
+
+    val (users, err) = client.getUserList
+    assert(err.isEmpty)
+    assert(Nil != users.filter { user => user.name == DB_USER })
+    assert(client.deleteUser(DB_USER).isEmpty)
 	}
 
-	test("create|get|update|authenticate|delete cluster admin") {
-		assert(None == client.createClusterAdmin(CLUSTER_ADMIN_USER, CLUSTER_ADMIN_PASS))
+	test("write|query series") {
+		assert(client.createDatabase(DB_NAME).isEmpty)
 
-		val (admins, err) = client.getClusterAdminList		
-		assert(None == err)
-		assert(Nil != admins.filter { admin => (admin.username == CLUSTER_ADMIN_USER) })
+    assert(client.writeSeries(Array(
+        Series(name = "events", keys = Map("state" -> "ny", "email" -> "paul@influxdb.org"), fields = Map("type" -> "follow")),
+        Series(name = "events", keys = Map("state" -> "ny", "email" -> "todd@influxdb.org"), fields = Map("type" -> "open")),
+        Series(name = "errors", keys = Map("class" -> "DivideByZero", "file" -> "example.py", "user" -> "someguy@influxdb.org"), fields = Map("severity" -> "fatal"))
+      ), DB_NAME).isEmpty)
 
-		assert(None == client.updateClusterAdmin(CLUSTER_ADMIN_USER, CLUSTER_ADMIN_NEWPASS))
-		assert(None != client.authenticateClusterAdmin(CLUSTER_ADMIN_USER, CLUSTER_ADMIN_PASS))
-		assert(None == client.authenticateClusterAdmin(CLUSTER_ADMIN_USER, CLUSTER_ADMIN_NEWPASS))
-		assert(None == client.deleteClusterAdmin(CLUSTER_ADMIN_USER))
-	}*/
+		val (response, err) = client.queryDatabase("SELECT email FROM events WHERE type = 'follow'", DB_NAME)
+		assert(err.isEmpty)
 
-	/*test("write|query series") {
-		assert(None == client.createDatabase(DB_NAME))
-		client.database = DB_NAME
-		val events = Series("events", 
-							Array("state", "email", "type"),
-							Array(
-								Array[Any]("ny", "paul@influxdb.org", "follow"),
-								Array[Any]("ny", "todd@influxdb.org", "open")								
-							)
-					)
-		val errors = Series("errors", 
-							Array("class", "file", "user", "severity"),
-							Array(
-								Array[Any]("DivideByZero", "example.py", "someguy@influxdb.org", "fatal")	
-							)
-					)
+    assert(response.head.values.head.head.asInstanceOf[String] == "paul@influxdb.org")
 
-		assert(None == client.writeSeries(Array(events, errors)))
-		
-		val (response, err) = client.query("SELECT email FROM events WHERE type = 'follow'")
-		assert(None == err)
+    assert(response.head.toSeriesMap.head("email") == "paul@influxdb.org")
 
-		val series = response.toSeries		
-		assert(series(0).points(0)(2) == "paul@influxdb.org")
-		
-		val seriesMap = response.toSeriesMap
-		assert(seriesMap(0).objects("email")(0) == "paul@influxdb.org")
-
-		assert(None == client.deleteDatabase(DB_NAME))
+		assert(client.deleteDatabase(DB_NAME).isEmpty)
 	}
 
-	test("get|delete continues queries") {
-		assert(None == client.createDatabase(DB_NAME))
-		client.database = DB_NAME
-
-		val clicks = Series("clicks", 
-							Array("ip", "value"),
-							Array(
-								Array("1.2.3.4", 1234),
-								Array("5.6.7.8", 5678),
-								Array("10.0.0.1", 10001),
-								Array("127.0.0.1", 0)
-							)
-					)
-		assert(None == client.writeSeries(Array(clicks)))
-
-		val sql = "SELECT * FROM clicks INTO events.global"
-		/*val (response, err1) = client.query(sql)
-		assert(None == err1)*/
-
-
-		assert(None == client.deleteDatabase(DB_NAME))
-	}*/
 }
