@@ -18,7 +18,7 @@ object InfluxDBClientBuild extends Build {
       resolvers += Classpaths.typesafeReleases,
       resolvers += "Apache repo"   at "https://repository.apache.org/content/repositories/releases",
       libraryDependencies ++= Seq(        
-        "org.json4s" %% "json4s-jackson" % "3.2.6",
+        "org.json4s" %% "json4s-jackson" % "3.2.11",
         "com.ning" % "async-http-client" % "1.0.0",
         "com.google.guava" % "guava" % "18.0",
 
