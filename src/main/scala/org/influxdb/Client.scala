@@ -18,7 +18,6 @@ import java.net.URLEncoder
 class Client(host: String = "localhost:8086",
              var username: String = "root",
              var password: String = "root",
-             var database: String = "",
              schema: String = "http",
              timeout: Int = 60,
              timeoutUnit: TimeUnit = TimeUnit.SECONDS) {
@@ -107,9 +106,15 @@ class Client(host: String = "localhost:8086",
     r._2
   }
 
-  def query(query: String, timePrecision: Option[TimeUnit] = None): (List[response.Series], error.Error) = {
+  def query(query: String, database: Option[String] = None, timePrecision: Option[TimeUnit] = None):
+  (List[response.Series], error.Error) = {
     try {
-      val params: Map[String, String] = Map("db" -> database, "q" -> query) ++
+      val params: Map[String, String] = Map("q" -> query) ++
+        (if (database.isDefined) {
+          Map("db" -> database.get)
+        } else {
+          Map()
+        }) ++
         (if (timePrecision.isDefined) {
           val epoch = timePrecision.get match {
             case TimeUnit.HOURS => "h"
@@ -132,7 +137,7 @@ class Client(host: String = "localhost:8086",
     }
   }
 
-  def writeSeries(series: Array[Series],
+  def writeSeries(series: Array[Series], database: String,
                                 writeConsistency: WriteConsistency = WriteConsistency.ALL,
                                 retentionPolicy: Option[String] = None): error.Error = {
     try {
@@ -188,6 +193,19 @@ class Client(host: String = "localhost:8086",
   }
 
   private def getResponse(fr: Future[Response]): Response = fr.get(timeout, timeoutUnit)
-  private def getUrlWithUserAndPass(path: String, username: String, password: String): String = s"$schema://$host$path?u=$username&p=$password"
-  private def getUrl(path: String) = getUrlWithUserAndPass(path, username, password)
+
+  private def getUrl(path: String, params: Option[Map[String, String]] = None) = {
+    val paramsWithUser = Map(
+      "u" -> username,
+      "p" -> password
+    ) ++ (
+      if (params.isDefined) {
+        params.get
+      } else {
+        Map()
+      }
+    )
+
+    s"$schema://$host$path?${createQueryString(paramsWithUser)}"
+  }
 }
