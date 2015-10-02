@@ -5,7 +5,6 @@ import java.util.Locale
 
 import com.google.common.escape.Escapers
 import org.influxdb.enums.Privilege._
-import org.influxdb.enums.TimePrecision._
 import org.influxdb.enums.WriteConsistency
 import org.influxdb.enums.WriteConsistency._
 import org.json4s.jackson.Serialization
@@ -108,10 +107,22 @@ class Client(host: String = "localhost:8086",
     r._2
   }
 
-  def query(query: String, timePrecision: Option[TimePrecision] = None): (List[response.Series], error.Error) = {
+  def query(query: String, timePrecision: Option[TimeUnit] = None): (List[response.Series], error.Error) = {
     try {
       val params: Map[String, String] = Map("db" -> database, "q" -> query) ++
-        (if (timePrecision.isDefined) Map("epoch" -> timePrecision.get.toString) else Map())
+        (if (timePrecision.isDefined) {
+          val epoch = timePrecision.get match {
+            case TimeUnit.HOURS => "h"
+            case TimeUnit.MINUTES => "m"
+            case TimeUnit.SECONDS => "s"
+            case TimeUnit.MILLISECONDS => "ms"
+            case TimeUnit.MICROSECONDS => "u"
+            case _ => "ns"
+          }
+          Map("epoch" -> epoch)
+        } else {
+          Map()
+        })
       val url = getUrl(s"/query") + "&" + createQueryString(params)
       val r = getResponse(httpClient.prepareGet(url).execute())
       val series = read[response.Response](r.getResponseBody).results.head.series
@@ -121,20 +132,13 @@ class Client(host: String = "localhost:8086",
     }
   }
 
-  /*def writeSeries(series: Array[Series]): error.Error = writeSeriesCommon(series, None)
-
-  def writeSeriesWithTimePrecision(series: Array[Series], timePrecision: String): error.Error = {
-    writeSeriesCommon(series, Some(Map[String, String]("time_precision" -> timePrecision)))
-  }*/
-
-  private def writeSeriesCommon(series: Array[Series],
-                                timePrecision: TimePrecision = NANOSECONDS,
+  def writeSeries(series: Array[Series],
                                 writeConsistency: WriteConsistency = WriteConsistency.ALL,
                                 retentionPolicy: Option[String] = None): error.Error = {
     try {
       val params: Map[String, String] = Map(
         "db" -> database,
-        "precision" -> timePrecision.toString,
+        "precision" -> "n",
         "consistency" -> writeConsistency.toString
       ) ++ (if (retentionPolicy.isDefined) Map("rp" -> retentionPolicy.get) else Map())
 
@@ -158,12 +162,13 @@ class Client(host: String = "localhost:8086",
             )
         }).mkString(",")
 
-        s"$seriesName,$keys $fields"
+        val time = TimeUnit.NANOSECONDS.convert(series.time, series.timePrecision)
+
+        s"$seriesName,$keys $fields $time"
       }).mkString("\n")
 
-      //val fr = httpClient.preparePost(url).setBody(data).execute()
-      //responseToError(getResponse(fr))
-      Some(data)
+      val fr = httpClient.preparePost(url).setBody(data).execute()
+      responseToError(getResponse(fr))
     } catch {
       case ex: Exception => Some(ex.getMessage)
     }
