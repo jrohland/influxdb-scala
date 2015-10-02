@@ -146,7 +146,7 @@ class Client(host: String = "localhost:8086",
         } else {
           Map()
         })
-      val url = getUrl(s"/query") + "&" + createQueryString(params)
+      val url = getUrl(s"/query", Option(params))
       val r = getResponse(httpClient.prepareGet(url).execute())
       val series = read[response.Response](r.getResponseBody).results.head.series
       (series, responseToError(r))
@@ -168,7 +168,7 @@ class Client(host: String = "localhost:8086",
         "consistency" -> writeConsistency.toString
       ) ++ (if (retentionPolicy.isDefined) Map("rp" -> retentionPolicy.get) else Map())
 
-      val url = getUrl(s"/write") + "&" + createQueryString(params)
+      val url = getUrl(s"/write", Option(params))
       val data = series.map(series => {
         val seriesName = s"${keyEscaper.escape(series.name)}"
         val keys = series.keys.map(key => {
