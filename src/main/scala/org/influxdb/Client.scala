@@ -1,6 +1,7 @@
 package org.influxdb
 
-import org.influxdb.enums.{TimePrecision, Privilege}
+import org.influxdb.enums.Privilege._
+import org.influxdb.enums.TimePrecision._
 import org.json4s.jackson.Serialization
 import org.json4s.NoTypeHints
 import com.ning.http.client.{Response, AsyncHttpClient}
@@ -13,12 +14,12 @@ class Client(host: String = "localhost:8086",
              var username: String = "root",
              var password: String = "root",
              var database: String = "",
-             schema: String = "http") {
+             schema: String = "http",
+             timeout: Int = 60,
+             timeoutUnit: TimeUnit = TimeUnit.SECONDS) {
 
   implicit val formats = Serialization.formats(NoTypeHints)
   private val httpClient = new AsyncHttpClient()
-
-  var (timeout, unit) = (60, TimeUnit.SECONDS)
 
   def close() {
     httpClient.close()
@@ -94,10 +95,10 @@ class Client(host: String = "localhost:8086",
     r._2
   }
 
-  def query(query: String, epoch: Option[TimePrecision] = None): (List[response.Series], error.Error) = {
+  def query(query: String, timePrecision: Option[TimePrecision] = None): (List[response.Series], error.Error) = {
     try {
       val params: Map[String, String] = Map("db" -> database, "q" -> query) ++
-        (if (epoch.isDefined) Map("epoch" -> epoch.get.toString()) else Map())
+        (if (timePrecision.isDefined) Map("epoch" -> timePrecision.get.toString) else Map())
       val url = getUrl(s"/query") + "&" + createQueryString(params)
       val r = getResponse(httpClient.prepareGet(url).execute())
       val series = read[response.Response](r.getResponseBody).results.head.series
@@ -137,7 +138,7 @@ class Client(host: String = "localhost:8086",
     }).mkString("&")
   }
 
-  private def getResponse(fr: Future[Response]): Response = fr.get(timeout, unit)
+  private def getResponse(fr: Future[Response]): Response = fr.get(timeout, timeoutUnit)
   private def getUrlWithUserAndPass(path: String, username: String, password: String): String = s"$schema://$host$path?u=$username&p=$password"
   private def getUrl(path: String) = getUrlWithUserAndPass(path, username, password)
 }
