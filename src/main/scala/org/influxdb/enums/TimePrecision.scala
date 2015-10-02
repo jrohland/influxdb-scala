@@ -1,5 +1,6 @@
 package org.influxdb.enums
 
-class TimePrecision extends Enumeration {
+object TimePrecision extends Enumeration {
+  type TimePrecision = Value
   val h, m, s, ms, u, ns = Value
 }

@@ -1,5 +1,6 @@
 package org.influxdb.enums
 
-class Privilege extends Enumeration {
+object Privilege extends Enumeration {
+  type Privilege = Value
   val READ, WRITE, ALL = Value
 }
