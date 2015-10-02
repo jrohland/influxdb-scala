@@ -60,7 +60,7 @@ class Client(host: String = "localhost:8086",
         val databases = r._1.flatMap(series => {
           series.values.flatMap(value => {
             value.map(v => {
-              new response.Database(v)
+              new response.Database(v.asInstanceOf[String])
             })
           })
         })
@@ -104,6 +104,20 @@ class Client(host: String = "localhost:8086",
     val q = s"REVOKE ALL PRIVILEGES TO $username"
     val r = query(q)
     r._2
+  }
+
+  def getUserList: (List[response.User], error.Error) = {
+    val r = query("SHOW USERS")
+    r._2 match {
+      case None =>
+        val users = r._1.flatMap(series => {
+          series.values.map(value => {
+            new response.User(value.head.asInstanceOf[String], value(1).asInstanceOf[Boolean])
+          })
+        })
+        (users, None)
+      case Some(err) => (Nil, Some(err))
+    }
   }
 
   def query(query: String, database: Option[String] = None, timePrecision: Option[TimeUnit] = None):
