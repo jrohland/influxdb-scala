@@ -148,8 +148,14 @@ class Client(host: String = "localhost:8086",
         })
       val url = getUrl(s"/query", Option(params))
       val r = getResponse(httpClient.prepareGet(url).execute())
-      val series = read[response.Response](r.getResponseBody).results.head.series
-      (series, responseToError(r))
+      val results = read[response.Response](r.getResponseBody).results.head
+      if (results.error.isDefined) {
+        (null, Some(results.error.get))
+      } else if (results.series.isDefined) {
+        (results.series.get, responseToError(r))
+      } else {
+        (null, responseToError(r))
+      }
     } catch {
       case ex: Exception => (null, Some(ex.getMessage))
     }
