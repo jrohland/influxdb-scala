@@ -106,6 +106,10 @@ class Client(host: String = "localhost:8086",
     r._2
   }
 
+  def deleteUser(name: String): error.Error = {
+    query(s"DROP USER $name")._2
+  }
+
   def getUserList: (List[response.User], error.Error) = {
     val r = query("SHOW USERS")
     r._2 match {
