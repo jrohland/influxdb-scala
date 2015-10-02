@@ -5,7 +5,7 @@ object InfluxDBClientBuild extends Build {
   val Organization = "org.influxdb"
   val Name = "InfluxDB Client"
   val Version = "0.1.0-SNAPSHOT"
-  val ScalaVersion = "2.10.3"
+  val ScalaVersion = "2.10.4"
 
   lazy val project = Project (
     "influxdb-scala",
