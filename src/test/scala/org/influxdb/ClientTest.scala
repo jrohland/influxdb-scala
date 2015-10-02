@@ -47,15 +47,15 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 		assert(client.createDatabase(DB_NAME).isEmpty)
 
     assert(client.writeSeries(Array(
-        Series(name = "events", keys = Map("state" -> "ny", "email" -> "paul@influxdb.org"), fields = Map("type" -> "follow")),
-        Series(name = "events", keys = Map("state" -> "ny", "email" -> "todd@influxdb.org"), fields = Map("type" -> "open")),
-        Series(name = "errors", keys = Map("class" -> "DivideByZero", "file" -> "example.py", "user" -> "someguy@influxdb.org"), fields = Map("severity" -> "fatal"))
+        Series(name = "events", keys = Map("state" -> "ny", "email" -> "paul@influxdb.org", "type" -> "follow"), fields = Map("value" -> 1)),
+        Series(name = "events", keys = Map("state" -> "ny", "email" -> "todd@influxdb.org", "type" -> "open"), fields = Map("value" -> 3.14)),
+        Series(name = "errors", keys = Map("class" -> "DivideByZero", "file" -> "example.py", "user" -> "someguy@influxdb.org", "severity" -> "fatal"), fields = Map("value" -> "foo"))
       ), DB_NAME).isEmpty)
 
-		val (response, err) = client.queryDatabase("SELECT email FROM events WHERE type = 'follow'", DB_NAME)
+		val (response, err) = client.queryDatabase("SELECT email, value FROM events WHERE type = 'follow'", DB_NAME)
 		assert(err.isEmpty)
 
-    assert(response.head.values.head.head.asInstanceOf[String] == "paul@influxdb.org")
+    assert(response.head.values.head(1).asInstanceOf[String] == "paul@influxdb.org")
 
     assert(response.head.toSeriesMap.head("email") == "paul@influxdb.org")
 
