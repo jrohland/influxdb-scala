@@ -1,18 +1,15 @@
 package org.influxdb
 
-import java.text.NumberFormat
-import java.util.Locale
+import java.net.URLEncoder
+import java.util.concurrent.{Future, TimeUnit}
 
-import com.google.common.escape.Escapers
+import com.ning.http.client.{AsyncHttpClient, Response}
 import org.influxdb.enums.Privilege._
 import org.influxdb.enums.WriteConsistency
 import org.influxdb.enums.WriteConsistency._
-import org.json4s.jackson.Serialization
 import org.json4s.NoTypeHints
-import com.ning.http.client.{Response, AsyncHttpClient}
-import java.util.concurrent.{Future, TimeUnit}
+import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization._
-import java.net.URLEncoder
 
 
 class Client(host: String = "localhost:8086",
@@ -24,13 +21,6 @@ class Client(host: String = "localhost:8086",
 
   implicit val formats = Serialization.formats(NoTypeHints)
   private val httpClient = new AsyncHttpClient()
-
-  private val keyEscaper = Escapers.builder().addEscape(' ', "\\ ").addEscape(',', "\\,").build()
-  private val fieldEscaper = Escapers.builder().addEscape('"', "\\\"").build()
-  private val numberFormat = NumberFormat.getInstance(Locale.ENGLISH)
-  numberFormat.setMaximumFractionDigits(340)
-  numberFormat.setGroupingUsed(false)
-  numberFormat.setMinimumFractionDigits(1)
 
   def close() {
     httpClient.close()
@@ -176,27 +166,8 @@ class Client(host: String = "localhost:8086",
 
       val url = getUrl(s"/write", Option(params))
       val data = series.map(series => {
-        val seriesName = s"${keyEscaper.escape(series.name)}"
-        val keys = series.keys.map(key => {
-          s"${keyEscaper.escape(key._1)}=${keyEscaper.escape(key._2)}"
-        }).mkString(",")
-
-        val fields = series.fields.map(field => {
-          s"${fieldEscaper.escape(field._1)}=" + (
-              field._2 match {
-                case s: String =>
-                  "\"" + fieldEscaper.escape(s) + "\""
-                case n: java.lang.Number =>
-                  s"${numberFormat.format(n)}"
-                case default =>
-                  s"$default"
-              }
-            )
-        }).mkString(",")
-
         val time = TimeUnit.NANOSECONDS.convert(series.time, series.timePrecision)
-
-        s"$seriesName,$keys $fields $time"
+        s"$series.keysStr $series.fieldsStr $time"
       }).mkString("\n")
 
       val fr = httpClient.preparePost(url).setBody(data).execute()
