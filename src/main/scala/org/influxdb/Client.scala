@@ -154,19 +154,32 @@ class Client(host: String = "localhost:8086",
   def queryDatabase(queryStr: String, database: String, timePrecision: Option[TimeUnit] = None):
   (List[response.Series], error.Error) = query(queryStr, Option(database), timePrecision)
 
-  def writeSeries(series: Array[Series], database: String,
-                                writeConsistency: WriteConsistency = WriteConsistency.ALL,
-                                retentionPolicy: Option[String] = None): error.Error = {
+  def writeSeries(series: Array[Series],
+                  database: String,
+                  timePrecision: TimeUnit = TimeUnit.NANOSECONDS,
+                  writeConsistency: WriteConsistency = WriteConsistency.ALL,
+                  retentionPolicy: Option[String] = None): error.Error = {
+
+    val precisionStr = timePrecision match {
+      case TimeUnit.HOURS => "h"
+      case TimeUnit.MINUTES => "m"
+      case TimeUnit.SECONDS => "s"
+      case TimeUnit.MILLISECONDS => "ms"
+      case TimeUnit.MICROSECONDS => "u"
+      case TimeUnit.NANOSECONDS => "n"
+      case _ => return Some("Invalid time precision")
+    }
+
     try {
       val params: Map[String, String] = Map(
         "db" -> database,
-        "precision" -> "n",
+        "precision" -> precisionStr,
         "consistency" -> writeConsistency.toString
       ) ++ (if (retentionPolicy.isDefined) Map("rp" -> retentionPolicy.get) else Map())
 
       val url = getUrl(s"/write", Option(params))
       val data = series.map(series => {
-        val time = TimeUnit.NANOSECONDS.convert(series.time, series.timePrecision)
+        val time = timePrecision.convert(series.time, series.timePrecision)
         s"${series.keysStr} ${series.fieldsStr} $time"
       }).mkString("\n")
 
