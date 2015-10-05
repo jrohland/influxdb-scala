@@ -167,7 +167,7 @@ class Client(host: String = "localhost:8086",
       val url = getUrl(s"/write", Option(params))
       val data = series.map(series => {
         val time = TimeUnit.NANOSECONDS.convert(series.time, series.timePrecision)
-        s"$series.keysStr $series.fieldsStr $time"
+        s"${series.keysStr} ${series.fieldsStr} $time"
       }).mkString("\n")
 
       val fr = httpClient.preparePost(url).setBody(data).execute()
