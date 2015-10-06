@@ -43,6 +43,37 @@ client.Database.delete("testdb") match {
 }
 ```
 
+#### Writing Data
+```
+val time = new Date().getTime / 1000
+
+val series = Array(
+  new Series(name = "testseries", keys = Map("name" -> "one", "location" -> "ny"), fields = Map("value" -> 1), time = time, timePrecision = TimeUnit.SECONDS),
+  new Series(name = "testseries", keys = Map("name" -> "one", "location" -> "ny"), fields = Map("value" -> 2), time = time + 1, timePrecision = TimeUnit.SECONDS),
+  new Series(name = "testseries", keys = Map("name" -> "two", "location" -> "ny"), fields = Map("value" -> 2), time = time, timePrecision = TimeUnit.SECONDS)
+)
+
+client.writeSeries(series = series, database = "testdb", timePrecision = TimeUnit.SECONDS) match {
+  case Some(error) => throw new Exception(error)
+  case _ => println("Series written")
+}
+```
+
+#### Querying Data
+```
+val results = client.queryDatabase(queryStr = s"SELECT SUM(value) FROM testseries WHERE time >= ${time}s GROUP BY time(1h),name,location", database = "testdb")
+
+results._2 match {
+  case Some(error) => throw new Exception(error)
+  case _ =>
+    println(s"${results._1.head.tags.get.keySet.mkString(",")},${results._1.head.columns.mkString(",")}")
+    println("---------------------")
+    results._1.foreach(series => {
+      println(s"${series.tags.get.values.mkString(",")},${series.values.head.mkString(",")}")
+    })
+}
+```
+
 #### User Operations
 ##### Create User
 ```
@@ -106,36 +137,5 @@ client.User.revokeAllPrivilege(username = "testuser") match {
 client.User.delete("testuser") match {
   case Some(error) => throw new Exception(error)
   case _ => println("User deleted")
-}
-```
-
-#### Writing Data
-```
-val time = new Date().getTime / 1000
-
-val series = Array(
-  new Series(name = "testseries", keys = Map("name" -> "one", "location" -> "ny"), fields = Map("value" -> 1), time = time, timePrecision = TimeUnit.SECONDS),
-  new Series(name = "testseries", keys = Map("name" -> "one", "location" -> "ny"), fields = Map("value" -> 2), time = time + 1, timePrecision = TimeUnit.SECONDS),
-  new Series(name = "testseries", keys = Map("name" -> "two", "location" -> "ny"), fields = Map("value" -> 2), time = time, timePrecision = TimeUnit.SECONDS)
-)
-
-client.writeSeries(series = series, database = "testdb", timePrecision = TimeUnit.SECONDS) match {
-  case Some(error) => throw new Exception(error)
-  case _ => println("Series written")
-}
-```
-
-#### Querying Data
-```
-val results = client.queryDatabase(queryStr = s"SELECT SUM(value) FROM testseries WHERE time >= ${time}s GROUP BY time(1h),name,location", database = "testdb")
-
-results._2 match {
-  case Some(error) => throw new Exception(error)
-  case _ => 
-    println(s"${results._1.head.tags.get.keySet.mkString(",")},${results._1.head.columns.mkString(",")}")
-    println("---------------------")
-    results._1.foreach(series => {
-      println(s"${series.tags.get.values.mkString(",")},${series.values.head.mkString(",")}")
-    })
 }
 ```
