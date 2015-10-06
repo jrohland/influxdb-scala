@@ -35,83 +35,91 @@ class Client(host: String = "localhost:8086",
     }
   }
 
-  def createDatabase(name: String): error.Error = {
-    query(s"CREATE DATABASE $name")._2
-  }
+  object Database {
 
-  def deleteDatabase(name: String): error.Error = {
-    query(s"DROP DATABASE $name")._2
-  }
+    def create(name: String): error.Error = {
+      query(s"CREATE DATABASE $name")._2
+    }
 
-  def getDatabaseList: (List[response.Database], error.Error) = {
-    val r = query("SHOW DATABASES")
-    r._2 match {
-      case None =>
-        val databases = r._1.flatMap(series => {
-          series.values.flatMap(value => {
-            value.map(v => {
-              new response.Database(v.asInstanceOf[String])
+    def delete(name: String): error.Error = {
+      query(s"DROP DATABASE $name")._2
+    }
+
+    def list: (List[response.Database], error.Error) = {
+      val r = query("SHOW DATABASES")
+      r._2 match {
+        case None =>
+          val databases = r._1.flatMap(series => {
+            series.values.flatMap(value => {
+              value.map(v => {
+                new response.Database(v.asInstanceOf[String])
+              })
             })
           })
-        })
-        (databases, None)
-      case Some(err) => (Nil, Some(err))
+          (databases, None)
+        case Some(err) => (Nil, Some(err))
+      }
     }
+
   }
 
-  def createUser(username: String, password: String, isAdmin: Boolean): error.Error = {
-    val q = s"CREATE USER $username WITH PASSWORD '$password'" +
-      (if (isAdmin) " WITH ALL PRIVILEGES" else "")
-    val r = query(q)
-    r._2
-  }
+  object User {
 
-  def updateUserPassword(username: String, password: String): error.Error = {
-    val q = s"SET PASSWORD FOR $username = '$password'"
-    val r = query(q)
-    r._2
-  }
+    def create(username: String, password: String, isAdmin: Boolean): error.Error = {
+      val q = s"CREATE USER $username WITH PASSWORD '$password'" +
+        (if (isAdmin) " WITH ALL PRIVILEGES" else "")
+      val r = query(q)
+      r._2
+    }
 
-  def grantUserPrivilege(username: String, database: String, privilege: Privilege): error.Error = {
-    val q = s"GRANT $privilege ON $database TO $username"
-    val r = query(q)
-    r._2
-  }
+    def updatePassword(username: String, password: String): error.Error = {
+      val q = s"SET PASSWORD FOR $username = '$password'"
+      val r = query(q)
+      r._2
+    }
 
-  def grantUserAllPrivilege(username: String): error.Error = {
-    val q = s"GRANT ALL PRIVILEGES TO $username"
-    val r = query(q)
-    r._2
-  }
+    def grantPrivilege(username: String, database: String, privilege: Privilege): error.Error = {
+      val q = s"GRANT $privilege ON $database TO $username"
+      val r = query(q)
+      r._2
+    }
 
-  def revokeUserPrivilege(username: String, database: String, privilege: Privilege): error.Error = {
-    val q = s"REVOKE $privilege ON $database TO $username"
-    val r = query(q)
-    r._2
-  }
+    def grantAllPrivilege(username: String): error.Error = {
+      val q = s"GRANT ALL PRIVILEGES TO $username"
+      val r = query(q)
+      r._2
+    }
 
-  def revokeUserAllPrivilege(username: String): error.Error = {
-    val q = s"REVOKE ALL PRIVILEGES TO $username"
-    val r = query(q)
-    r._2
-  }
+    def revokePrivilege(username: String, database: String, privilege: Privilege): error.Error = {
+      val q = s"REVOKE $privilege ON $database TO $username"
+      val r = query(q)
+      r._2
+    }
 
-  def deleteUser(name: String): error.Error = {
-    query(s"DROP USER $name")._2
-  }
+    def revokeAllPrivilege(username: String): error.Error = {
+      val q = s"REVOKE ALL PRIVILEGES TO $username"
+      val r = query(q)
+      r._2
+    }
 
-  def getUserList: (List[response.User], error.Error) = {
-    val r = query("SHOW USERS")
-    r._2 match {
-      case None =>
-        val users = r._1.flatMap(series => {
-          series.values.map(value => {
-            new response.User(value.head.asInstanceOf[String], value(1).asInstanceOf[Boolean])
+    def delete(name: String): error.Error = {
+      query(s"DROP USER $name")._2
+    }
+
+    def list: (List[response.User], error.Error) = {
+      val r = query("SHOW USERS")
+      r._2 match {
+        case None =>
+          val users = r._1.flatMap(series => {
+            series.values.map(value => {
+              new response.User(value.head.asInstanceOf[String], value(1).asInstanceOf[Boolean])
+            })
           })
-        })
-        (users, None)
-      case Some(err) => (Nil, Some(err))
+          (users, None)
+        case Some(err) => (Nil, Some(err))
+      }
     }
+
   }
 
   def query(queryStr: String, database: Option[String] = None, timePrecision: Option[TimeUnit] = None):

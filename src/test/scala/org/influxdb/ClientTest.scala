@@ -26,25 +26,25 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 	}
 
 	test("create|get|delete database") {
-		assert(client.createDatabase(DB_NAME).isEmpty)
+		assert(client.Database.create(DB_NAME).isEmpty)
 
-		val (dbs, err) = client.getDatabaseList
+		val (dbs, err) = client.Database.list
 		assert(err.isEmpty)
 		assert(Nil != dbs.filter { db => db.name == DB_NAME })
-		assert(client.deleteDatabase(DB_NAME).isEmpty)
+		assert(client.Database.delete(DB_NAME).isEmpty)
 	}
 
 	test("create|get|delete user") {
-    assert(client.createUser(DB_USER, DB_PASSWORD, isAdmin = false).isEmpty)
+    assert(client.User.create(DB_USER, DB_PASSWORD, isAdmin = false).isEmpty)
 
-    val (users, err) = client.getUserList
+    val (users, err) = client.User.list
     assert(err.isEmpty)
     assert(Nil != users.filter { user => user.name == DB_USER })
-    assert(client.deleteUser(DB_USER).isEmpty)
+    assert(client.User.delete(DB_USER).isEmpty)
 	}
 
 	test("write|query series") {
-		assert(client.createDatabase(DB_NAME).isEmpty)
+		assert(client.Database.create(DB_NAME).isEmpty)
 
     assert(client.writeSeries(Array(
         Series(name = "events", tags = Map("state" -> "ny", "email" -> "paul@influxdb.org", "type" -> "follow"), values = Map("value" -> 1)),
@@ -59,7 +59,7 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 
     assert(response.head.toSeriesMap.head("email") == "paul@influxdb.org")
 
-		assert(client.deleteDatabase(DB_NAME).isEmpty)
+		assert(client.Database.delete(DB_NAME).isEmpty)
 	}
 
 }
