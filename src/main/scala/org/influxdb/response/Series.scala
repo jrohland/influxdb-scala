@@ -1,6 +1,9 @@
 package org.influxdb.response
 
-case class Series(columns: List[String], name: Option[String], values: List[List[Any]]) {
+case class Series(columns: List[String],
+                  name: Option[String],
+                  tags: Option[Map[String, String]],
+                  values: List[List[Any]]) {
 
   def toSeriesMap: List[Map[String, Any]] = {
     values.map(valueArray => {
