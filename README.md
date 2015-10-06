@@ -4,7 +4,9 @@
 
 ### Dependencies
 >org.json4s:json4s-jackson:3.2.11
+
 >com.ning:async-http-clien:1.0.0
+
 >com.google.guava:guava:18.0
 
 ### Usage
