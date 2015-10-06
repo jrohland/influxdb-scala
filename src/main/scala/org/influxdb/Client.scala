@@ -130,7 +130,8 @@ class Client(host: String = "localhost:8086",
             case TimeUnit.SECONDS => "s"
             case TimeUnit.MILLISECONDS => "ms"
             case TimeUnit.MICROSECONDS => "u"
-            case _ => "ns"
+            case TimeUnit.NANOSECONDS => "ns"
+            case _ => return (null, Some("Invalid time precision"))
           }
           Map("epoch" -> epoch)
         } else {
