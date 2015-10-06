@@ -30,7 +30,7 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 
 		val (dbs, err) = client.Database.list
 		assert(err.isEmpty)
-		assert(Nil != dbs.filter { db => db.name == DB_NAME })
+		assert(Nil != dbs.filter { _ == DB_NAME })
 		assert(client.Database.delete(DB_NAME).isEmpty)
 	}
 

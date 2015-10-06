@@ -45,14 +45,14 @@ class Client(host: String = "localhost:8086",
       query(s"DROP DATABASE $name")._2
     }
 
-    def list: (List[response.Database], error.Error) = {
+    def list: (List[String], error.Error) = {
       val r = query("SHOW DATABASES")
       r._2 match {
         case None =>
           val databases = r._1.flatMap(series => {
             series.values.flatMap(value => {
               value.map(v => {
-                new response.Database(v.asInstanceOf[String])
+                v.asInstanceOf[String]
               })
             })
           })

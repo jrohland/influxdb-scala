@@ -31,7 +31,7 @@ client.Database.create("testdb") match {
 val results = client.Database.list
 results._2 match {
   case Some(error) => throw new Exception(error)
-  case _ => results._1.foreach(db => println(db.name))
+  case _ => results._1.foreach(println(_))
 }
 ```
 
