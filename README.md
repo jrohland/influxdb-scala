@@ -10,18 +10,107 @@
 >com.google.guava:guava:18.0
 
 ### Usage
+
+#### Connection
 ```
-import java.util.Date
-import java.util.concurrent.TimeUnit
-import org.influxdb.{Series, Client}
-
+import org.influxdb.Client
 val client = new Client(host = "localhost:8086", username = "root", password = "root")
+```
 
-client.createDatabase("testdb") match {
+#### Database Operations
+##### Create Database
+```
+client.Database.create("testdb") match {
   case Some(error) => throw new Exception(error)
   case _ => println("Database created")
 }
+```
 
+##### List Databases
+```
+val results = client.Database.list
+results._2 match {
+  case Some(error) => throw new Exception(error)
+  case _ => results._1.foreach(db => println(db.name))
+}
+```
+
+##### Delete Database
+```
+client.Database.delete("testdb") match {
+  case Some(error) => throw new Exception(error)
+  case _ => println("Database deleted")
+}
+```
+
+#### User Operations
+##### Create User
+```
+client.User.create(username = "testuser", password = "password", isAdmin = false) match {
+  case Some(error) => throw new Exception(error)
+  case _ => println("User created")
+}
+```
+
+##### List Users
+```
+val results = client.User.list
+results._2 match {
+  case Some(error) => throw new Exception(error)
+  case _ => results._1.foreach(user => println(user.name))
+}
+```
+
+##### Update User Password
+```
+client.User.updatePassword(username = "testuser", password = "newpassword") match {
+  case Some(error) => throw new Exception(error)
+  case _ => println("Password updated")
+}
+```
+
+##### Grant Specific Privilege on Database
+```
+client.User.grantPrivilege(username = "testuser", database = "testdb", privilege = Privilege.ALL) match {
+  case Some(error) => throw new Exception(error)
+  case _ => println("Privilege granted")
+}
+```
+
+##### Grant All Privilege
+```
+client.User.grantAllPrivilege(username = "testuser") match {
+  case Some(error) => throw new Exception(error)
+  case _ => println("All privileges granted")
+}
+```
+
+##### Revoke Specific Privilege on Database
+```
+client.User.revokePrivilege(username = "testuser", database = "testdb", privilege = Privilege.ALL) match {
+  case Some(error) => throw new Exception(error)
+  case _ => println("Privilege revoked")
+}
+```
+
+##### Revoke All Privilege
+```
+client.User.revokeAllPrivilege(username = "testuser") match {
+  case Some(error) => throw new Exception(error)
+  case _ => println("All privileges revoked")
+}
+```
+
+##### Delete User
+```
+client.User.delete("testuser") match {
+  case Some(error) => throw new Exception(error)
+  case _ => println("User deleted")
+}
+```
+
+#### Writing Data
+```
 val time = new Date().getTime / 1000
 
 val series = Array(
@@ -34,7 +123,10 @@ client.writeSeries(series = series, database = "testdb", timePrecision = TimeUni
   case Some(error) => throw new Exception(error)
   case _ => println("Series written")
 }
+```
 
+#### Querying Data
+```
 val results = client.queryDatabase(queryStr = s"SELECT SUM(value) FROM testseries WHERE time >= ${time}s GROUP BY time(1h),name,location", database = "testdb")
 
 results._2 match {
@@ -46,21 +138,4 @@ results._2 match {
       println(s"${series.tags.get.values.mkString(",")},${series.values.head.mkString(",")}")
     })
 }
-
-client.deleteDatabase("testdb") match {
-  case Some(error) => throw new Exception(error)
-  case _ => println("Database deleted")
-}
-
-```
-
-Output
-```
-Database created
-Series written
-location,name,time,sum
----------------------
-ny,one,2015-10-06T02:22:29Z,3
-ny,two,2015-10-06T02:22:29Z,2
-Database deleted
 ```
