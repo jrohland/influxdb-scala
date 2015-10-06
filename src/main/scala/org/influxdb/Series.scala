@@ -7,62 +7,62 @@ import java.util.concurrent.TimeUnit
 import com.google.common.escape.Escapers
 
 case class Series(name: String,
-                  keys: Map[String, String],
-                  fields: Map[String, Any],
+                  tags: Map[String, String],
+                  values: Map[String, Any],
                   time: Long = System.nanoTime(),
                   timePrecision: TimeUnit = TimeUnit.NANOSECONDS)  {
 
-  private val keyEscaper = Escapers.builder().addEscape(' ', "\\ ").addEscape(',', "\\,").build()
-  private val fieldEscaper = Escapers.builder().addEscape('"', "\\\"").build()
+  private val tagEscaper = Escapers.builder().addEscape(' ', "\\ ").addEscape(',', "\\,").build()
+  private val valueEscaper = Escapers.builder().addEscape('"', "\\\"").build()
   private val numberFormat = NumberFormat.getInstance(Locale.ENGLISH)
   numberFormat.setMaximumFractionDigits(340)
   numberFormat.setGroupingUsed(false)
   numberFormat.setMinimumFractionDigits(1)
 
-  def keysStr: String = {
+  def tagsStr: String = {
     if (name == null) {
       throw new NullPointerException("Null series name")
     }
 
-    val seriesName = s"${keyEscaper.escape(name)}"
-    val keysStr = keys.map(key => {
-      if (key._1 != null) {
-        if (key._2 != null) {
-          s"${keyEscaper.escape(key._1)}=${keyEscaper.escape(key._2)}"
+    val seriesName = s"${tagEscaper.escape(name)}"
+    val tagsStr = tags.map(tag => {
+      if (tag._1 != null) {
+        if (tag._2 != null) {
+          s"${tagEscaper.escape(tag._1)}=${tagEscaper.escape(tag._2)}"
         } else {
-          throw new NullPointerException(s"Null key value for key: ${key._1}")
+          throw new NullPointerException(s"Null tag value for tag: ${tag._1}")
         }
       } else {
-        throw new NullPointerException("Null key name")
+        throw new NullPointerException("Null tag name")
       }
     }).mkString(",")
-    s"$seriesName,$keysStr"
+    s"$seriesName,$tagsStr"
   }
 
-  def fieldsStr: String = {
-    fields.map(field => {
-      if (field._1 != null) {
-        if (field._2 != null) {
-          s"${fieldEscaper.escape(field._1)}=" + (
-            field._2 match {
+  def valuesStr: String = {
+    values.map(value => {
+      if (value._1 != null) {
+        if (value._2 != null) {
+          s"${valueEscaper.escape(value._1)}=" + (
+            value._2 match {
               case s: String =>
-                "\"" + fieldEscaper.escape(s) + "\""
+                "\"" + valueEscaper.escape(s) + "\""
               case n: java.lang.Number =>
                 s"${numberFormat.format(n)}"
               case default =>
                 s"$default"
             })
         } else {
-          throw new NullPointerException(s"Null field value for field: ${field._1}")
+          throw new NullPointerException(s"Null field value for value: ${value._1}")
         }
       } else {
-        throw new NullPointerException("Null field name")
+        throw new NullPointerException("Null value name")
       }
     }).mkString(",")
   }
 
   override def toString: String = {
-    s"$keysStr $fieldsStr"
+    s"$tagsStr $valuesStr"
   }
 
 }

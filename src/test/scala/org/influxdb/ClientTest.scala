@@ -47,9 +47,9 @@ class ClientTest  extends FunSuite with BeforeAndAfter {
 		assert(client.createDatabase(DB_NAME).isEmpty)
 
     assert(client.writeSeries(Array(
-        Series(name = "events", keys = Map("state" -> "ny", "email" -> "paul@influxdb.org", "type" -> "follow"), fields = Map("value" -> 1)),
-        Series(name = "events", keys = Map("state" -> "ny", "email" -> "todd@influxdb.org", "type" -> "open"), fields = Map("value" -> 3.14)),
-        Series(name = "errors", keys = Map("class" -> "DivideByZero", "file" -> "example.py", "user" -> "someguy@influxdb.org", "severity" -> "fatal"), fields = Map("value" -> "foo"))
+        Series(name = "events", tags = Map("state" -> "ny", "email" -> "paul@influxdb.org", "type" -> "follow"), values = Map("value" -> 1)),
+        Series(name = "events", tags = Map("state" -> "ny", "email" -> "todd@influxdb.org", "type" -> "open"), values = Map("value" -> 3.14)),
+        Series(name = "errors", tags = Map("class" -> "DivideByZero", "file" -> "example.py", "user" -> "someguy@influxdb.org", "severity" -> "fatal"), values = Map("value" -> "foo"))
       ), DB_NAME).isEmpty)
 
 		val (response, err) = client.queryDatabase("SELECT email, value FROM events WHERE type = 'follow'", DB_NAME)
